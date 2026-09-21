@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const authMiddleware = require("../middleware/authMiddleware");
 
 const {
   getNotes,
@@ -12,17 +13,16 @@ const {
 
 const validateNote = require("../middleware/validateNote");
 
-router.get("/search", searchNotes);
+router.get("/search", authMiddleware, searchNotes);
 
+router.get("/", authMiddleware, getNotes);
 
-router.get("/", getNotes);
+router.get("/:id", authMiddleware, getNoteById);
 
-router.get("/:id", getNoteById);
+router.post("/", authMiddleware, validateNote, createNote);
 
-router.post("/", validateNote, createNote);
+router.put("/:id", authMiddleware, validateNote, updateNote);
 
-router.put("/:id", validateNote, updateNote);
-
-router.delete("/:id", deleteNote);
+router.delete("/:id", authMiddleware, deleteNote);
 
 module.exports = router;

@@ -8,11 +8,25 @@ const getNotes = async (req, res, next) => {
 
     const skip = (page - 1) * limit;
 
-    const notes = await Note.find()
+    const filter = {
+      user: req.user.userId
+    };
+
+    const notes = await Note.find(filter)
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    res.json(notes);
+    const totalNotes = await Note.countDocuments(filter);
+
+    const totalPages = Math.ceil(totalNotes / limit);
+
+    res.json({
+      currentPage: page,
+      totalPages: totalPages,
+      totalNotes: totalNotes,
+      notes: notes
+    });
   } catch (error) {
     next(error);
   }
@@ -21,7 +35,10 @@ const getNotes = async (req, res, next) => {
 // GET single note
 const getNoteById = async (req, res, next) => {
   try {
-    const note = await Note.findById(req.params.id);
+    const note = await Note.findOne({
+      _id: req.params.id,
+      user: req.user.userId
+    });
 
     if (!note) {
       return res.status(404).json({
@@ -40,7 +57,8 @@ const createNote = async (req, res, next) => {
   try {
     const note = new Note({
       title: req.body.title.trim(),
-      content: req.body.content.trim()
+      content: req.body.content.trim(),
+      user: req.user.userId
     });
 
     const savedNote = await note.save();
@@ -54,13 +72,18 @@ const createNote = async (req, res, next) => {
 // UPDATE note
 const updateNote = async (req, res, next) => {
   try {
-    const note = await Note.findByIdAndUpdate(
-      req.params.id,
+    const note = await Note.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        user: req.user.userId
+      },
       {
         title: req.body.title.trim(),
         content: req.body.content.trim()
       },
-      { new: true }
+      {
+        new: true
+      }
     );
 
     if (!note) {
@@ -78,7 +101,10 @@ const updateNote = async (req, res, next) => {
 // DELETE note
 const deleteNote = async (req, res, next) => {
   try {
-    const note = await Note.findByIdAndDelete(req.params.id);
+    const note = await Note.findOneAndDelete({
+      _id: req.params.id,
+      user: req.user.userId
+    });
 
     if (!note) {
       return res.status(404).json({
@@ -106,9 +132,20 @@ const searchNotes = async (req, res, next) => {
     }
 
     const notes = await Note.find({
+      user: req.user.userId,
       $or: [
-        { title: { $regex: keyword, $options: "i" } },
-        { content: { $regex: keyword, $options: "i" } }
+        {
+          title: {
+            $regex: keyword,
+            $options: "i"
+          }
+        },
+        {
+          content: {
+            $regex: keyword,
+            $options: "i"
+          }
+        }
       ]
     });
 
